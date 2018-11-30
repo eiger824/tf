@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <stdarg.h>
+#include <pthread.h>
 #include <errno.h>
 #include <time.h>
 #include <string.h>
@@ -11,6 +12,7 @@
 
 #include "utils.h"
 #include "dbg.h"
+
 
 struct term_size tf_get_term_size(const char* device)
 {
@@ -40,7 +42,7 @@ struct term_size tf_get_term_size(const char* device)
         }
     }
     ioctl(fd, TIOCGWINSZ, &w);
-    t.rows = w.ws_row - 1;  /* Take one row (for the terminal prompt) */
+    t.rows = w.ws_row;
     t.cols = w.ws_col;
     t.fd   = fd;
     tf_dbg(1, "Obtained a size of %zu x %zu for %s!\n", t.rows, t.cols, device);
@@ -67,7 +69,61 @@ void tf_fill_term(struct term_size t, int c, enum tf_color_type ct)
     }
     // Set back color to normal
     if (ct != TF_NORMAL)
+    {
         printf("%s", tf_color_from_enum(TF_NORMAL));
+        fflush(stdout);
+    }
+}
+
+void* tf_thread_run(void* args)
+{
+    size_t row, col, nrows, ncols;
+    int c;
+    tf_thread_data_t* d = (tf_thread_data_t*)args;
+    nrows = d->t.rows;
+    ncols = d->t.cols;
+    srand(time(NULL));
+
+    for (;;)
+    {
+        col = rand() % (ncols) + 1;
+        for (row = 1; row <= nrows; ++row)
+        {
+            // Place the cursor here
+            tf_goto_coord(d->t, row, col);
+            // Generate a random ASCII char (including spaces)
+            c = rand() % (TF_ASCII_MAX - TF_ASCII_MIN ) + TF_ASCII_MIN - 1;
+            // And print it
+            printf("%s%c", tf_color_from_enum(TF_RANDOM), c);
+            fflush(stdout);
+            // Sleep a bit to notice the effect
+            usleep(2000);
+        }
+    }
+    return NULL;
+}
+
+void tf_fill_vertical_rain(struct term_size t, size_t n)
+{
+    pthread_t thread[n];
+    pthread_attr_t attr;
+
+    tf_thread_data_t arg[n];
+    pthread_attr_init(&attr);
+
+    tf_clear_term();
+
+    size_t i;
+    for (i = 0; i < n; ++i)
+    {
+        arg[i].id = i;
+        arg[i].t = t;
+        pthread_create(&thread[i], &attr, tf_thread_run,  (void*)&arg[i]);
+    }
+    for (i = 0; i < n; i++)
+    {
+        pthread_join(thread[i], NULL);
+    }
 }
 
 void tf_fill_random_term(struct term_size t)
@@ -86,6 +142,7 @@ void tf_fill_random_term(struct term_size t)
     }
     // Set back color to normal
     printf("%s", tf_color_from_enum(TF_NORMAL));
+    fflush(stdout);
 }
 
 void tf_clear_term()

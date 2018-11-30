@@ -3,12 +3,13 @@ OUTDIR        := bin
 CROSS_COMPILE := $(CROSS_COMPILE)
 CC            ?= gcc
 CFLAGS        ?= -Wall -Wextra -std=c11 -g
-LDFLAGS       ?= -Wall -Wextra -std=c11 -g
+LDFLAGS       ?= -Wall -Wextra -std=c11 -g -pthread
 
 OBJS          := \
 	$(OUTDIR)/dbg.o \
 	$(OUTDIR)/colors.o \
 	$(OUTDIR)/utils.o \
+	$(OUTDIR)/signal.o \
 	$(OUTDIR)/termfill.o
 
 all: $(OUTDIR) $(OUTDIR)/$(PROGRAM)

@@ -6,7 +6,7 @@
 /* Program specifics */
 #define     TF_VERSION_MAJOR    0
 #define     TF_VERSION_MINOR    1
-#define     TF_REVISION         1
+#define     TF_REVISION         2
 
 /* Error codes - TODO: implement more */
 #define     TF_SUCCESS      0
@@ -31,6 +31,12 @@ struct term_size
     size_t cols;
     int fd;       /* File descriptor which has allocated to this terminal */
 };
+
+typedef struct tf_thread_data
+{
+    size_t id;
+    struct term_size t;
+} tf_thread_data_t;
 
 
 #endif /* TF_DEFS_H_ */

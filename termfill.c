@@ -1,3 +1,6 @@
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <libgen.h>
@@ -10,10 +13,12 @@
 #include "defs.h"
 #include "utils.h"
 #include "dbg.h"
+#include "signal.h"
 
 void tf_usage(char* progname)
 {
     printf("USAGE: %s [OPTIONS]\n\n", basename(progname));
+    printf("  -a          Show a live animation, like a multithreaded vertical rain of characters\n");
     printf("  -c          Clear the current terminal and exit\n");
     printf("  -d <dev>    The device to be used\n");
     printf("  -D <level>  Enable \"level\" amount of debug\n");
@@ -34,6 +39,7 @@ int main(int argc, char* argv[])
     int c;
     int clear = 0;
     int random = 0;
+    int animated = 0;
     struct term_size ts;
     char tf_program_name[100];
     strcpy(tf_program_name, argv[0]);
@@ -41,10 +47,13 @@ int main(int argc, char* argv[])
     char* text = "hello";  /* Default text to write */
 
     /* Parse command line arguments */
-    while ((c = getopt(argc, argv, "cd:D:hrt:v")) != -1)
+    while ((c = getopt(argc, argv, "acd:D:hrt:v")) != -1)
     {
         switch (c)
         {
+            case 'a':
+                animated = 1;
+                break;
             case 'c':
                 clear = 1;
                 break;
@@ -72,6 +81,11 @@ int main(int argc, char* argv[])
         }
     }
 
+    // Set the signal callback
+    if (signal(SIGINT, tf_sighdlr) == SIG_ERR)
+    {
+        tf_dbg(1, "Wont catch SIGINT\n");
+    }
     // Get the terminal size of the specified device
     ts = tf_get_term_size(tty_dev);
 
@@ -89,6 +103,10 @@ int main(int argc, char* argv[])
     }
     /* Do something */
     tf_paint_text(ts, text);
+    if (animated == 1)
+    {
+        tf_fill_vertical_rain(ts, 8);
+    }
 
     return 0;
 }
