@@ -41,7 +41,6 @@ int main(int argc, char* argv[])
     int clear = 0;
     int random = 0;
     int animated = 0;
-    struct term_size ts;
     char tf_program_name[100];
     strcpy(tf_program_name, argv[0]);
     char* tty_dev = "/dev/stdout";  /* Use standard output as default */
@@ -88,25 +87,25 @@ int main(int argc, char* argv[])
         tf_dbg(1, "Wont catch SIGINT\n");
     }
     // Get the terminal size of the specified device
-    ts = tf_get_term_size(tty_dev);
+    g_ts = tf_get_term_size(tty_dev);
 
-    tf_dbg(1, "Dealing with a terminal window of size %zu x %zu.\n", ts.rows, ts.cols);
+    tf_dbg(1, "Dealing with a terminal window of size %zu x %zu.\n", g_ts.rows, g_ts.cols);
 
     if (clear == 1)
     {
-        tf_clear_term();
+        tf_clear_term(g_ts);
         exit (TF_SUCCESS);
     }
     if (random == 1)
     {
-        tf_fill_random_term(ts);
+        tf_fill_random_term(g_ts);
         exit (TF_SUCCESS);
     }
     /* Do something */
-    tf_paint_text(ts, text);
+    // tf_paint_text(g_ts, text);
     if (animated == 1)
     {
-        tf_fill_vertical_rain(ts);
+        tf_fill_vertical_rain(g_ts);
     }
 
     return 0;

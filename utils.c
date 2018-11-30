@@ -14,7 +14,6 @@
 #include "utils.h"
 #include "dbg.h"
 
-
 struct term_size tf_get_term_size(const char* device)
 {
     struct winsize w;
@@ -40,7 +39,7 @@ struct term_size tf_get_term_size(const char* device)
         fd = open(device, O_RDWR | O_APPEND);
         if (fd < 0)
         {
-            tf_die("Could not open file %s for reading");
+            tf_die("Could not open file %s for reading", device);
         }
     }
     /* Check whether this device really is a tty */
@@ -74,17 +73,16 @@ void tf_fill_term(struct term_size t, int c, enum tf_color_type ct)
         for (cols = 0; cols < t.cols; ++cols)
         {
             if (c >= TF_ASCII_MIN && c <= TF_ASCII_MAX)
-                printf("%s%c", color, c);
+                tf_write_dev(t.fd, "%s%c", color, c);
             else
-                printf("?");
+                tf_write_dev(t.fd, "?");
         }
-        printf("\n");
+        tf_write_dev(t.fd, "\n");
     }
     // Set back color to normal
     if (ct != TF_NORMAL)
     {
-        printf("%s", tf_color_from_enum(TF_NORMAL));
-        fflush(stdout);
+        tf_write_dev(t.fd, "%s", tf_color_from_enum(TF_NORMAL));
     }
 }
 
@@ -107,8 +105,7 @@ void* tf_thread_run(void* args)
             // Generate a random ASCII char (including spaces)
             c = rand() % (TF_ASCII_MAX - TF_ASCII_MIN ) + TF_ASCII_MIN - 1;
             // And print it
-            printf("%s%c", tf_color_from_enum(TF_RANDOM), c);
-            fflush(stdout);
+            tf_write_dev(d->t.fd, "%s%c", tf_color_from_enum(TF_RANDOM), c);
             // Sleep a bit to notice the effect
             usleep(2000);
         }
@@ -127,7 +124,7 @@ void tf_fill_vertical_rain(struct term_size t)
     tf_thread_data_t arg[n];
     pthread_attr_init(&attr);
 
-    tf_clear_term();
+    tf_clear_term(t);
 
     size_t i;
     for (i = 0; i < n; ++i)
@@ -150,33 +147,32 @@ void tf_fill_random_term(struct term_size t)
     {
         for (cols = 0; cols < t.cols; ++cols)
         {
-            printf("%s%c",
+            tf_write_dev(t.fd, "%s%c",
                     tf_color_from_enum(TF_RANDOM),
                     rand() % (TF_ASCII_MAX - TF_ASCII_MIN + 1) + TF_ASCII_MIN);
         }
-        printf("\n");
+        tf_write_dev(t.fd, "\n");
     }
     // Set back color to normal
-    printf("%s", tf_color_from_enum(TF_NORMAL));
-    fflush(stdout);
+    tf_write_dev(t.fd, "%s", tf_color_from_enum(TF_NORMAL));
 }
 
-void tf_clear_term()
+void tf_clear_term(struct term_size t)
 {
-    TF_CLEAR_TERM();
+    tf_write_dev(t.fd, "\033[H\033[J");
 }
-void tf_goto_coord(struct term_size ts, size_t row, size_t col)
+void tf_goto_coord(struct term_size t, size_t row, size_t col)
 {
-    assert (row >= 1 && row <= ts.rows);
-    assert (col >= 1 && col <= ts.cols);
+    assert (row >= 1 && row <= t.rows);
+    assert (col >= 1 && col <= t.cols);
     /* Remember: indexes start at 1 */
-    TF_GOTO_COORD(row, col);
+    tf_write_dev(t.fd, "\033[%zu;%zuH", row, col);
 }
 
 //TODO: change return type (better to handle errors)
 void tf_paint_text(struct term_size t, const char* text)
 {
-    tf_clear_term();
+    tf_clear_term(t);
     size_t text_length = strlen(text);
     // Calculate how the screen will be divided for every char
     size_t width_per_char  = t.cols / text_length;
@@ -193,12 +189,11 @@ void tf_paint_text(struct term_size t, const char* text)
         {
             for (current_col = 1; current_col <= width_per_char; ++current_col)
             {
-                printf("%c",
+                tf_write_dev(t.fd, "%c",
                         (current_col == 1 || current_col == width_per_char) || \
                         (current_row == 1 || current_row == height_per_char) ?
                         '*' : ' ');
             }
-            fflush(stdout);
             // Update the cursor
             int offset = current_row < height_per_char ? 1 : 0;
             tf_goto_coord(t, current_row + offset, (current_char * width_per_char) + 1);
@@ -214,7 +209,7 @@ void tf_paint_text(struct term_size t, const char* text)
     }
     // Move cursor to the leftmost bottom corner ;-)
     tf_goto_coord(t, t.rows, 1);
-    printf("\n");
+    tf_write_dev(t.fd, "\n");
 }
 
 void tf_die(const char* fmt, ...)
@@ -228,16 +223,16 @@ void tf_die(const char* fmt, ...)
     exit(ret);
 }
 
-void tf_write_dev(struct term_size t, const char* fmt, ...)
+void tf_write_dev(int fd, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
     char buffer[1024];
     vsprintf(buffer, fmt, args);
-    if (write(t.fd, buffer, strlen(buffer)) < 0)
+    if (write(fd, buffer, strlen(buffer)) < 0)
     {
         va_end(args);
-        tf_die("Failed to write %zu bytes to file descriptor %d\n", strlen(buffer), t.fd);
+        tf_die("Failed to write %zu bytes to file descriptor %d\n", strlen(buffer), fd);
     }
     va_end(args);
 }

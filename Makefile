@@ -2,8 +2,8 @@ PROGRAM       := tf
 OUTDIR        := bin
 CROSS_COMPILE := $(CROSS_COMPILE)
 CC            ?= gcc
-CFLAGS        ?= -Wall -Wextra -std=c11 -g
-LDFLAGS       ?= -Wall -Wextra -std=c11 -g -pthread
+CFLAGS        += -Wall -Wextra -std=c11 -g
+LDFLAGS       += -Wall -Wextra -std=c11 -g -pthread
 
 OBJS          := \
 	$(OUTDIR)/dbg.o \

@@ -9,10 +9,9 @@ void tf_sighdlr(int signo)
     if (signo == SIGINT)
     {
         // Clear the terminal
-        tf_clear_term();
+        tf_clear_term(g_ts);
         // And set the cursor color back to normal
-        printf("%s", tf_color_from_enum(TF_NORMAL));
-        fflush(stdout);
+        tf_write_dev(g_ts.fd, "%s", tf_color_from_enum(TF_NORMAL));
     }
     exit(signo);
 }
