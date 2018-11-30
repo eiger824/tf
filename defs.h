@@ -29,6 +29,7 @@ struct term_size
 {
     size_t rows;
     size_t cols;
+    int fd;       /* File descriptor which has allocated to this terminal */
 };
 
 

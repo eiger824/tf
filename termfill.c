@@ -15,7 +15,8 @@ void tf_usage(char* progname)
 {
     printf("USAGE: %s [OPTIONS]\n\n", basename(progname));
     printf("  -c          Clear the current terminal and exit\n");
-    printf("  -d <level>  Enable \"level\" amount of debug\n");
+    printf("  -d <dev>    The device to be used\n");
+    printf("  -D <level>  Enable \"level\" amount of debug\n");
     printf("  -h          Show this help and exit\n");
     printf("  -r          Fill the current terminal with random ASCII characters of random colors\n");
     printf("  -v          Show version information and exit\n");
@@ -30,37 +31,54 @@ void tf_print_info(char* progname)
 int main(int argc, char* argv[])
 {
     int c;
+    int clear = 0;
+    int random = 0;
+    struct term_size ts;
     char tf_program_name[100];
     strcpy(tf_program_name, argv[0]);
-
-    struct term_size ts = tf_get_term_size();
+    char* tty_dev = "/dev/stdout";  /* Use standard output as default */
 
     /* Parse command line arguments */
-    while ((c = getopt(argc, argv, "cd:hrv")) != -1)
+    while ((c = getopt(argc, argv, "cd:D:hrv")) != -1)
     {
         switch (c)
         {
             case 'c':
-                tf_clear_term();
-                exit(TF_SUCCESS);
+                clear = 1;
+                break;
             case 'd':
+                tty_dev = optarg;
+                break;
+            case 'D':
                 tf_set_debug_level(atoi(optarg));
                 break;
             case 'h':
                 tf_usage(tf_program_name);
                 exit(TF_SUCCESS);
             case 'r':
-                tf_fill_random_term(ts);
-                exit(TF_SUCCESS);
+                random = 1;
+                break;
             case 'v':
                 tf_print_info(tf_program_name);
                 exit(TF_SUCCESS);
         }
     }
 
+    // Get the terminal size of the specified device
+    ts = tf_get_term_size(tty_dev);
+
     tf_dbg(1, "Dealing with a terminal window of size %zu x %zu.\n", ts.rows, ts.cols);
 
-
+    if (clear == 1)
+    {
+        tf_clear_term();
+        exit (TF_SUCCESS);
+    }
+    if (random == 1)
+    {
+        tf_fill_random_term(ts);
+        exit (TF_SUCCESS);
+    }
     /* Do something */
     tf_paint_text(ts, "Hello");
 
