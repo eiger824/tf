@@ -40,7 +40,7 @@ struct term_size tf_get_term_size(const char* device)
         }
     }
     ioctl(fd, TIOCGWINSZ, &w);
-    t.rows = w.ws_row;
+    t.rows = w.ws_row - 1;  /* Take one row (for the terminal prompt) */
     t.cols = w.ws_col;
     t.fd   = fd;
     tf_dbg(1, "Obtained a size of %zu x %zu for %s!\n", t.rows, t.cols, device);
@@ -116,13 +116,14 @@ void tf_paint_text(struct term_size t, const char* text)
 
     for (current_char = 0; current_char < text_length; ++current_char)
     {
-        int c = 97 + current_char;
-
         for (current_row = 1; current_row <= height_per_char; ++current_row)
         {
             for (current_col = 1; current_col <= width_per_char; ++current_col)
             {
-                printf("%c", c);
+                printf("%c",
+                        (current_col == 1 || current_col == width_per_char) || \
+                        (current_row == 1 || current_row == height_per_char) ?
+                        '*' : ' ');
             }
             fflush(stdout);
             // Update the cursor
@@ -130,10 +131,17 @@ void tf_paint_text(struct term_size t, const char* text)
             tf_goto_coord(t, current_row + offset, (current_char * width_per_char) + 1);
         }
         /* Update these so @tf_goto_coord places the cursor on the right position */
-        current_row = 1;
-        current_col = (current_char * width_per_char) + 1;
-        tf_goto_coord(t, current_row, current_col);
+        /* We dont do this for the last char */
+        if (current_char < text_length - 1)
+        {
+            current_row = 1;
+            current_col = ((current_char + 1) * width_per_char) + 1;
+            tf_goto_coord(t, current_row, current_col);
+        }
     }
+    // Move cursor to the leftmost bottom corner ;-)
+    tf_goto_coord(t, t.rows, 1);
+    printf("\n");
 }
 
 void tf_die(const char* fmt, ...)

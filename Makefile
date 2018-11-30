@@ -1,16 +1,33 @@
 PROGRAM       := tf
+OUTDIR        := bin
 CROSS_COMPILE := $(CROSS_COMPILE)
 CC            ?= gcc
-CFLAGS        ?= -Wall -Wextra -std=c11
-LDFLAGS       ?= -Wall -Wextra -std=c11
+CFLAGS        ?= -Wall -Wextra -std=c11 -g
+LDFLAGS       ?= -Wall -Wextra -std=c11 -g
 
-OBJS          := dbg.o colors.o utils.o termfill.o
+OBJS          := \
+	$(OUTDIR)/dbg.o \
+	$(OUTDIR)/colors.o \
+	$(OUTDIR)/utils.o \
+	$(OUTDIR)/termfill.o
 
-$(PROGRAM): $(OBJS) 
+all: $(OUTDIR) $(OUTDIR)/$(PROGRAM)
+
+$(OUTDIR):
+	test -d $(OUTDIR) || mkdir $(OUTDIR)
+
+$(OUTDIR)/$(PROGRAM): $(OBJS)
 	$(CC) -o $@ $(LDFLAGS) $^
+	@# Remove any symlinks
+	rm -f tf
+	# Make a symlink
+	ln -s ./bin/tf
 
-%.o: %.c %.h defs.h
+$(OUTDIR)/termfill.o: termfill.c defs.h
+	$(CC) -o $@ -c $(CFLAGS) $<
+
+$(OUTDIR)/%.o: %.c %.h defs.h
 	$(CC) -o $@ -c $(CFLAGS) $<
 
 clean:
-	rm -f *~ $(PROGRAM) *.o
+	rm -rf *~ $(PROGRAM) *.o $(OUTDIR)

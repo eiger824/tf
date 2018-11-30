@@ -19,6 +19,7 @@ void tf_usage(char* progname)
     printf("  -D <level>  Enable \"level\" amount of debug\n");
     printf("  -h          Show this help and exit\n");
     printf("  -r          Fill the current terminal with random ASCII characters of random colors\n");
+    printf("  -t <text>   Write \"text\" to the terminal\n");
     printf("  -v          Show version information and exit\n");
 }
 
@@ -37,9 +38,10 @@ int main(int argc, char* argv[])
     char tf_program_name[100];
     strcpy(tf_program_name, argv[0]);
     char* tty_dev = "/dev/stdout";  /* Use standard output as default */
+    char* text = "hello";  /* Default text to write */
 
     /* Parse command line arguments */
-    while ((c = getopt(argc, argv, "cd:D:hrv")) != -1)
+    while ((c = getopt(argc, argv, "cd:D:hrt:v")) != -1)
     {
         switch (c)
         {
@@ -58,9 +60,15 @@ int main(int argc, char* argv[])
             case 'r':
                 random = 1;
                 break;
+            case 't':
+                text = optarg;
+                break;
             case 'v':
                 tf_print_info(tf_program_name);
                 exit(TF_SUCCESS);
+            default:
+                tf_usage(tf_program_name);
+                exit(TF_ERROR);
         }
     }
 
@@ -80,7 +88,7 @@ int main(int argc, char* argv[])
         exit (TF_SUCCESS);
     }
     /* Do something */
-    tf_paint_text(ts, "Hello");
+    tf_paint_text(ts, text);
 
     return 0;
 }
