@@ -70,27 +70,26 @@ void tf_goto_coord(struct term_size ts, size_t x, size_t y)
 //TODO: change return type (better to handle errors)
 void tf_paint_text(struct term_size t, const char* text)
 {
-//     tf_clear_term();
+    tf_clear_term();
     size_t text_length = strlen(text);
     // Calculate how the screen will be divided for every char
     size_t width_per_char  = t.cols / text_length;
     size_t height_per_char = t.rows;
-    tf_dbg(1, "Each char will be contained in a %zux%zu box\n", width_per_char, height_per_char);
+    tf_dbg(2, "Each char will be contained in a %zux%zu box\n", width_per_char, height_per_char);
     size_t current_row = 0, current_col = 0, current_char;
 
-    for (current_char = 0; current_char < text_length; ++current_char)
+    for (current_char = 0; current_char < 2; ++current_char) /* TODO: change end char */
     {
         int c = 97 + current_char; 
         // Move the cursor to the current position
-//         tf_goto_coord(t, current_row, current_col); 
-        printf("set cursor on: %zu x %zu, end up in: %zu x %zu\n",
-                current_row, current_col, height_per_char, (current_char + 1) * width_per_char);
+        tf_goto_coord(t, current_row, current_col);
         for (current_row = 0; current_row < height_per_char; ++current_row)
         {
-            for (current_col = current_char * width_per_char; current_col < (current_char + 1) * width_per_char; ++current_col)
+            for (current_col = 0; current_col < width_per_char; ++current_col)
             {
-//                 printf("%c", c);
+                printf("%c", c);
             }
+            printf("\n");
         }
         current_row = 0;
     }
