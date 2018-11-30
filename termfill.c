@@ -16,17 +16,30 @@
 #define     _BSD_SOURCE
 #define     _POSIX_SOURCE
 
+static struct option long_options[] = {
+    {"animation", no_argument      , 0, 'a'},
+    {"clear"    , no_argument      , 0, 'c'},
+    {"device"   , required_argument, 0, 'd'},
+    {"debug"    , required_argument, 0, 'D'},
+    {"help"     , no_argument      , 0, 'h'},
+    {"rain"     , no_argument      , 0, 'r'},
+    {"text"     , required_argument, 0, 't'},
+    {"version"  , no_argument      , 0, 'v'},
+    {0          , 0                , 0,  0 }
+};
+
 void tf_usage(char* progname)
 {
     printf("USAGE: %s [OPTIONS]\n\n", basename(progname));
-    printf("  -a          Show a live animation, like a multithreaded vertical rain of characters\n");
-    printf("  -c          Clear the current terminal and exit\n");
-    printf("  -d <dev>    The device to be used\n");
-    printf("  -D <level>  Enable \"level\" amount of debug\n");
-    printf("  -h          Show this help and exit\n");
-    printf("  -r          Fill the current terminal with random ASCII characters of random colors\n");
-    printf("  -t <text>   Write \"text\" to the terminal\n");
-    printf("  -v          Show version information and exit\n");
+    printf("  -a|--animation      Show a live animation, like a multithreaded vertical rain of characters\n");
+    printf("  -c|--clear          Clear the current terminal and exit\n");
+    printf("  -d|--device <dev>   The device to be used. By default, the tty device attached to the current\n"
+           "                      standard output is used, i.e., /dev/stdout. \"dev\" **must** be a tty.\n");
+    printf("  -D|--debug  <level> Enable \"level\" amount of debug\n");
+    printf("  -h|--help           Show this help and exit\n");
+    printf("  -r|--rain           Fill the current terminal with random ASCII characters of random colors\n");
+    printf("  -t|--text   <text>  Write \"text\" to the terminal\n");
+    printf("  -v|--verbose        Show version information and exit\n");
 }
 
 void tf_print_info(char* progname)
@@ -37,7 +50,7 @@ void tf_print_info(char* progname)
 
 int main(int argc, char* argv[])
 {
-    int c;
+    int c, option_index = 0;
     int clear = 0;
     int random = 0;
     int animated = 0;
@@ -47,7 +60,7 @@ int main(int argc, char* argv[])
     char* text = "hello";  /* Default text to write */
 
     /* Parse command line arguments */
-    while ((c = getopt(argc, argv, "acd:D:hrt:v")) != -1)
+    while ((c = getopt_long(argc, argv, "acd:D:hrt:v", long_options, &option_index)) != -1)
     {
         switch (c)
         {
