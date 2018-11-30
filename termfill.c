@@ -1,6 +1,3 @@
-#define _DEFAULT_SOURCE
-#define _BSD_SOURCE
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <libgen.h>
@@ -14,6 +11,10 @@
 #include "utils.h"
 #include "dbg.h"
 #include "signal.h"
+
+#define     _DEFAULT_SOURCE
+#define     _BSD_SOURCE
+#define     _POSIX_SOURCE
 
 void tf_usage(char* progname)
 {
@@ -105,7 +106,7 @@ int main(int argc, char* argv[])
     tf_paint_text(ts, text);
     if (animated == 1)
     {
-        tf_fill_vertical_rain(ts, 8);
+        tf_fill_vertical_rain(ts);
     }
 
     return 0;

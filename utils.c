@@ -8,6 +8,7 @@
 #include <time.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/sysinfo.h>
 #include <fcntl.h>
 
 #include "utils.h"
@@ -19,6 +20,7 @@ struct term_size tf_get_term_size(const char* device)
     struct winsize w;
     struct term_size t;
     int fd;
+
     /* Don't re-open file descriptors if standard input/output/error are selected */
     if (!strcmp(device, "/dev/stdout"))
     {
@@ -41,11 +43,22 @@ struct term_size tf_get_term_size(const char* device)
             tf_die("Could not open file %s for reading");
         }
     }
+    /* Check whether this device really is a tty */
+    if (!isatty(fd))
+    {
+        close(fd);
+        tf_die("This file is not a tty");
+    }
+    /* Query the size of this tty device */
     ioctl(fd, TIOCGWINSZ, &w);
+
+    /* Fill in the data structure */
     t.rows = w.ws_row;
     t.cols = w.ws_col;
     t.fd   = fd;
+
     tf_dbg(1, "Obtained a size of %zu x %zu for %s!\n", t.rows, t.cols, device);
+
     /* Close only if we are NOT dealing with standard input/output/error */
     if (fd != STDOUT_FILENO && fd != STDERR_FILENO && STDIN_FILENO)
         close(fd);
@@ -103,8 +116,11 @@ void* tf_thread_run(void* args)
     return NULL;
 }
 
-void tf_fill_vertical_rain(struct term_size t, size_t n)
+void tf_fill_vertical_rain(struct term_size t)
 {
+    /* Get available cpus, not necessarily HT threads though... */
+    size_t n = get_nprocs();
+
     pthread_t thread[n];
     pthread_attr_t attr;
 
@@ -225,3 +241,4 @@ void tf_write_dev(struct term_size t, const char* fmt, ...)
     }
     va_end(args);
 }
+

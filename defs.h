@@ -6,7 +6,7 @@
 /* Program specifics */
 #define     TF_VERSION_MAJOR    0
 #define     TF_VERSION_MINOR    1
-#define     TF_REVISION         2
+#define     TF_REVISION         3
 
 /* Error codes - TODO: implement more */
 #define     TF_SUCCESS      0
