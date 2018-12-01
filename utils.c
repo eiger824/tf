@@ -15,6 +15,10 @@
 #include "utils.h"
 #include "dbg.h"
 
+static bool tf_animation_in_progress = false;
+
+static pthread_mutex_t g_tf_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 struct term_size tf_get_term_size(const char* device)
 {
     struct winsize w;
@@ -106,7 +110,12 @@ void* tf_thread_run(void* args)
 
     for (;;)
     {
-        col = rand() % (ncols) + 1;
+        pthread_mutex_lock(&g_tf_mutex);
+        // Find a free column
+        do { col = rand() % (ncols) + 1;} while (tf_columns[col] == true);
+        // Update this col as taken
+        tf_columns[col] = true;
+        pthread_mutex_unlock(&g_tf_mutex);
         for (row = 1; row <= nrows; ++row)
         {
             // Place the cursor here
@@ -118,6 +127,10 @@ void* tf_thread_run(void* args)
             // Sleep a bit to notice the effect
             usleep(2000);
         }
+        // Release this column
+        pthread_mutex_lock(&g_tf_mutex);
+        tf_columns[col] = false;
+        pthread_mutex_unlock(&g_tf_mutex);
     }
     return NULL;
 }
@@ -134,6 +147,14 @@ void tf_fill_vertical_rain(struct term_size t)
     pthread_attr_init(&attr);
 
     tf_clear_term(t);
+
+    /* Toggle this flag to be able to release memory from signal */
+    tf_animation_in_progress = true;
+
+    /* Create an array of the columns */
+    tf_columns = (bool*) malloc (sizeof(bool) * t.cols);
+    for (size_t i = 0; i < t.cols; ++i)
+        tf_columns[i] = false;
 
     size_t i;
     for (i = 0; i < n; ++i)
@@ -293,3 +314,7 @@ void tf_write_dev(int fd, const char* fmt, ...)
     va_end(args);
 }
 
+bool tf_is_animation_in_progress()
+{
+    return tf_animation_in_progress;
+}
