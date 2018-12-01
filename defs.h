@@ -19,12 +19,20 @@
 /* Terminal colors */
 #define     TF_NUMCOLORS    8
 
+typedef struct coordinate
+{
+    size_t row;
+    size_t col;
+} tf_coord_t;
+
 /* The basic structure used everywhere */
 struct term_size
 {
     size_t rows;
     size_t cols;
-    int fd;       /* File descriptor which has allocated to this terminal */
+    int fd;                     /* File descriptor which has allocated to this terminal */
+    tf_coord_t init_cursor_pos; /* The original cursor position before the program start */
+    tf_coord_t cursor_pos;      /* The current cursor position */
 };
 
 typedef struct tf_thread_data

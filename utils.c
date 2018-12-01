@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <stdarg.h>
+#include <termios.h>
 #include <pthread.h>
 #include <errno.h>
 #include <time.h>
@@ -56,7 +57,15 @@ struct term_size tf_get_term_size(const char* device)
     t.cols = w.ws_col;
     t.fd   = fd;
 
-    tf_dbg(1, "Obtained a size of %zu x %zu for %s!\n", t.rows, t.cols, device);
+    /* These two fields will be initialized after `tf_get_cursos_pos` call */
+    t.init_cursor_pos.row = 0;
+    t.init_cursor_pos.col = 0;
+
+    if (tf_get_cursor_pos(&t) != 0)
+        tf_dbg(1, "Unable to get current cursor position\n");
+
+    tf_dbg(1, "Obtained a terminal window size of %zu x %zu for %s!\n", t.rows, t.cols, device);
+    tf_dbg(1, "Original cursor on position (x,y)=(%zu,%zu)\n", t.init_cursor_pos.row, t.init_cursor_pos.col);
 
     /* Close only if we are NOT dealing with standard input/output/error */
     if (fd != STDOUT_FILENO && fd != STDERR_FILENO && STDIN_FILENO)
@@ -101,7 +110,7 @@ void* tf_thread_run(void* args)
         for (row = 1; row <= nrows; ++row)
         {
             // Place the cursor here
-            tf_goto_coord(d->t, row, col);
+            tf_set_cursor_pos(&(d->t), row, col);
             // Generate a random ASCII char (including spaces)
             c = rand() % (TF_ASCII_MAX - TF_ASCII_MIN ) + TF_ASCII_MIN - 1;
             // And print it
@@ -161,12 +170,59 @@ void tf_clear_term(struct term_size t)
 {
     tf_write_dev(t.fd, "\033[H\033[J");
 }
-void tf_goto_coord(struct term_size t, size_t row, size_t col)
+
+int tf_get_cursor_pos(struct term_size* t)
 {
-    assert (row >= 1 && row <= t.rows);
-    assert (col >= 1 && col <= t.cols);
+    char buf[30]={0};
+    int ret, i, pow;
+    char ch;
+
+    struct termios term, restore;
+
+    if (!t)
+        return 2;
+
+    tcgetattr(t->fd, &term);
+    tcgetattr(t->fd, &restore);
+    term.c_lflag &= ~(ICANON|ECHO);
+    tcsetattr(t->fd, TCSANOW, &term);
+
+    write(t->fd, "\033[6n", 4);
+
+    for( i = 0, ch = 0; ch != 'R'; i++ )
+    {
+        ret = read(t->fd, &ch, 1);
+        if ( !ret )
+        {
+            tf_write_dev(t->fd, "getpos: error reading response!\n");
+            return 1;
+        }
+        buf[i] = ch;
+    }
+
+    if (i < 2)
+        return 1;
+
+    for( i -= 2, pow = 1; buf[i] != ';'; i--, pow *= 10)
+        t->cursor_pos.col = t->cursor_pos.col + ( buf[i] - '0' ) * pow;
+
+    for( i-- , pow = 1; buf[i] != '['; i--, pow *= 10)
+        t->cursor_pos.row = t->cursor_pos.row + ( buf[i] - '0' ) * pow;
+
+    tcsetattr(t->fd, TCSANOW, &restore);
+    return 0;
+}
+
+void tf_set_cursor_pos(struct term_size* t, size_t row, size_t col)
+{
+    assert(t != NULL);
+    assert (row >= 1 && row <= t->rows);
+    assert (col >= 1 && col <= t->cols);
     /* Remember: indexes start at 1 */
-    tf_write_dev(t.fd, "\033[%zu;%zuH", row, col);
+    tf_write_dev(t->fd, "\033[%zu;%zuH", row, col);
+    /* Update these coordinates in the term structure */
+    t->cursor_pos.row = row;
+    t->cursor_pos.col = col;
 }
 
 //TODO: change return type (better to handle errors)
@@ -181,7 +237,7 @@ void tf_paint_text(struct term_size t, const char* text)
     size_t current_row = 0, current_col = 0, current_char;
 
     /* Start off att 1,1 */
-    tf_goto_coord(t, 1, 1);
+    tf_set_cursor_pos(&t, 1, 1);
 
     for (current_char = 0; current_char < text_length; ++current_char)
     {
@@ -196,19 +252,19 @@ void tf_paint_text(struct term_size t, const char* text)
             }
             // Update the cursor
             int offset = current_row < height_per_char ? 1 : 0;
-            tf_goto_coord(t, current_row + offset, (current_char * width_per_char) + 1);
+            tf_set_cursor_pos(&t, current_row + offset, (current_char * width_per_char) + 1);
         }
-        /* Update these so @tf_goto_coord places the cursor on the right position */
+        /* Update these so @tf_set_cursor_pos places the cursor on the right position */
         /* We dont do this for the last char */
         if (current_char < text_length - 1)
         {
             current_row = 1;
             current_col = ((current_char + 1) * width_per_char) + 1;
-            tf_goto_coord(t, current_row, current_col);
+            tf_set_cursor_pos(&t, current_row, current_col);
         }
     }
     // Move cursor to the leftmost bottom corner ;-)
-    tf_goto_coord(t, t.rows, 1);
+    tf_set_cursor_pos(&t, t.rows, 1);
     tf_write_dev(t.fd, "\n");
 }
 

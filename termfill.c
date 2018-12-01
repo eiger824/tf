@@ -102,8 +102,6 @@ int main(int argc, char* argv[])
     // Get the terminal size of the specified device
     g_ts = tf_get_term_size(tty_dev);
 
-    tf_dbg(1, "Dealing with a terminal window of size %zu x %zu.\n", g_ts.rows, g_ts.cols);
-
     if (clear == 1)
     {
         tf_clear_term(g_ts);
