@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <libgen.h>
 #include <unistd.h>
+#include <libgen.h>
 #include <string.h>
 #include <getopt.h>
 #include <assert.h>
@@ -11,10 +11,6 @@
 #include "utils.h"
 #include "dbg.h"
 #include "signal.h"
-
-#define     _DEFAULT_SOURCE
-#define     _BSD_SOURCE
-#define     _POSIX_SOURCE
 
 static struct option long_options[] = {
     {"animation", no_argument      , 0, 'a'},

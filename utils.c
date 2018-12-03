@@ -1,6 +1,7 @@
+#define _DEFAULT_SOURCE
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <assert.h>
 #include <stdarg.h>
 #include <termios.h>
@@ -108,7 +109,7 @@ void* tf_thread_run(void* args)
     ncols = d->t.cols;
     srand(time(NULL));
 
-    for (;;)
+    while (tf_animation_in_progress)
     {
         pthread_mutex_lock(&g_tf_mutex);
         // Find a free column
@@ -167,6 +168,12 @@ void tf_fill_vertical_rain(struct term_size t)
     {
         pthread_join(thread[i], NULL);
     }
+    /* Free the created array */
+    free(tf_columns);
+    /* And set the cursor color back to normal */
+    tf_write_dev(g_ts.fd, "%s", tf_color_from_enum(TF_NORMAL));
+    /* Clear the terminal */
+    tf_clear_term(g_ts);
 }
 
 void tf_fill_random_term(struct term_size t)
@@ -317,4 +324,9 @@ void tf_write_dev(int fd, const char* fmt, ...)
 bool tf_is_animation_in_progress()
 {
     return tf_animation_in_progress;
+}
+
+void tf_set_stop_thread_cond()
+{
+    tf_animation_in_progress = false;
 }

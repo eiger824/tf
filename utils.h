@@ -21,5 +21,6 @@ void   tf_paint_text(struct term_size t, const char* text);
 void   tf_die(const char* fmt, ...);
 void   tf_write_dev(int fd, const char* fmt, ...);
 bool   tf_is_animation_in_progress();
+void   tf_set_stop_thread_cond();
 
 #endif /* TF_UTILS_H_ */

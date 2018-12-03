@@ -6,9 +6,9 @@ CFLAGS        += -Wall -Wextra -std=c11 -g
 LDFLAGS       += -Wall -Wextra -std=c11 -g -pthread
 
 OBJS          := \
+	$(OUTDIR)/utils.o \
 	$(OUTDIR)/dbg.o \
 	$(OUTDIR)/colors.o \
-	$(OUTDIR)/utils.o \
 	$(OUTDIR)/signal.o \
 	$(OUTDIR)/termfill.o
 
