@@ -25,3 +25,25 @@ const char* tf_color_from_enum(enum tf_color_type ct)
     assert((int)ct >= 0 && (int)ct < TF_NUMCOLORS);
     return tf_colors[ct];
 }
+
+const enum tf_color_type tf_color_from_str(const char *c)
+{
+    if (!strcmp(c, "red"))
+        return TF_RED;
+    else if (!strcmp(c, "green"))
+        return TF_GREEN;
+    else if (!strcmp(c, "yellow"))
+        return TF_YELLOW;
+    else if (!strcmp(c, "blue"))
+        return TF_BLUE;
+    else if (!strcmp(c, "magenta"))
+        return TF_MAGENTA;
+    else if (!strcmp(c, "cyan"))
+        return TF_CYAN;
+    else if (!strcmp(c, "white"))
+        return TF_WHITE;
+    else if (!strcmp(c, "multicolor"))
+        return TF_RANDOM;
+    else
+        return TF_INVALID;
+}

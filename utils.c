@@ -19,6 +19,7 @@
 static bool tf_animation_in_progress = false;
 
 static pthread_mutex_t g_tf_mutex = PTHREAD_MUTEX_INITIALIZER;
+static enum tf_color_type g_tf_color = TF_RANDOM;
 
 struct term_size tf_get_term_size(const char* device)
 {
@@ -100,39 +101,62 @@ void tf_fill_term(struct term_size t, int c, enum tf_color_type ct)
     }
 }
 
+void tf_fill_random_col(u8_t *arr, size_t n)
+{
+    size_t i;
+    size_t start_blanks;
+    size_t nr_blanks;
+    // Generate a random ASCII char
+    for (i = 0; i < n; ++i)
+        arr[i] = rand() % (TF_ASCII_MAX - TF_ASCII_MIN ) + TF_ASCII_MIN - 1;
+    // Fill (deliberately) some spaces (visually better), at approx 1/2 of the rows 
+    nr_blanks = n/2;
+    start_blanks = rand() % (n - nr_blanks + 1);
+
+    for (i = start_blanks; i < start_blanks + nr_blanks; ++i)
+        arr[i] = ' ';
+}
+
 void* tf_thread_run(void* args)
 {
     size_t row, col, nrows, ncols;
     int c;
     tf_thread_data_t* d = (tf_thread_data_t*)args;
     nrows = d->t.rows;
-    ncols = d->t.cols;
+    ncols = d->stop_col - d->start_col + 1;
     srand(time(NULL));
+
+    u8_t **colvals = d->columns; 
+    colvals = (u8_t**) malloc(sizeof *colvals * ncols);
+    for (size_t i = 0; i < ncols; ++i)
+    {
+        *(colvals + i) = (u8_t*) malloc(sizeof(u8_t) * nrows);
+        tf_fill_random_col(*(colvals + i), nrows);
+    }
+    int tmp = 0;
 
     while (tf_animation_in_progress)
     {
         pthread_mutex_lock(&g_tf_mutex);
-        // Find a free column
-        do { col = rand() % (ncols) + 1;} while (tf_columns[col] == true);
-        // Update this col as taken
-        tf_columns[col] = true;
-        pthread_mutex_unlock(&g_tf_mutex);
         for (row = 1; row <= nrows; ++row)
         {
-            // Place the cursor here
-            tf_set_cursor_pos(&(d->t), row, col);
-            // Generate a random ASCII char (including spaces)
-            c = rand() % (TF_ASCII_MAX - TF_ASCII_MIN ) + TF_ASCII_MIN - 1;
-            // And print it
-            tf_write_dev(d->t.fd, "%s%c", tf_color_from_enum(TF_RANDOM), c);
-            // Sleep a bit to notice the effect
-            usleep(2000);
+            for (col = d->start_col; col <= d->stop_col; ++col)
+            {
+                // Place the cursor here
+                tf_set_cursor_pos(&(d->t), row, col);
+                // Print it
+                tf_write_dev(d->t.fd, "%s%c", tf_color_from_enum(g_tf_color),
+                        colvals[col - d->start_col][(nrows - row + tmp) % nrows]);
+            }
         }
-        // Release this column
-        pthread_mutex_lock(&g_tf_mutex);
-        tf_columns[col] = false;
         pthread_mutex_unlock(&g_tf_mutex);
+        tmp++;
+        // Sleep a bit to notice the effect
+        usleep(10000);
     }
+    for (size_t i = 0; i < ncols; ++i)
+        free(*(colvals + i));
+    free(colvals);
     return NULL;
 }
 
@@ -149,6 +173,9 @@ void tf_fill_vertical_rain(struct term_size t)
 
     tf_clear_term(t);
 
+    /* Hide cursor */
+    tf_write_dev(g_ts.fd, "%s", TF_HIDE_CURSOR);
+
     /* Toggle this flag to be able to release memory from signal */
     tf_animation_in_progress = true;
 
@@ -157,11 +184,19 @@ void tf_fill_vertical_rain(struct term_size t)
     for (size_t i = 0; i < t.cols; ++i)
         tf_columns[i] = false;
 
+    /* Cols per thread */
+    size_t cols_per_thread = t.cols / n;
+
     size_t i;
     for (i = 0; i < n; ++i)
     {
         arg[i].id = i;
         arg[i].t = t;
+        /* Start && stop columns for every thread */
+        arg[i].start_col = i*cols_per_thread + 1; 
+        arg[i].stop_col  = i < n - 1?
+                           (i+1)*cols_per_thread : 
+                           t.cols;                 /* Last thread: until last column */
         pthread_create(&thread[i], &attr, tf_thread_run,  (void*)&arg[i]);
     }
     for (i = 0; i < n; i++)
@@ -170,7 +205,9 @@ void tf_fill_vertical_rain(struct term_size t)
     }
     /* Free the created array */
     free(tf_columns);
-    /* And set the cursor color back to normal */
+    /* Show cursor again */
+    tf_write_dev(g_ts.fd, "%s", TF_SHOW_CURSOR);
+    /* Set the cursor color back to normal */
     tf_write_dev(g_ts.fd, "%s", tf_color_from_enum(TF_NORMAL));
     /* Clear the terminal */
     tf_clear_term(g_ts);
@@ -185,7 +222,7 @@ void tf_fill_random_term(struct term_size t)
         for (cols = 0; cols < t.cols; ++cols)
         {
             tf_write_dev(t.fd, "%s%c",
-                    tf_color_from_enum(TF_RANDOM),
+                    tf_color_from_enum(g_tf_color),
                     rand() % (TF_ASCII_MAX - TF_ASCII_MIN + 1) + TF_ASCII_MIN);
         }
         tf_write_dev(t.fd, "\n");
@@ -329,4 +366,18 @@ bool tf_is_animation_in_progress()
 void tf_set_stop_thread_cond()
 {
     tf_animation_in_progress = false;
+}
+
+bool tf_set_color(const char* c)
+{
+    enum tf_color_type ct = tf_color_from_str(c);
+    if (ct == TF_INVALID)
+    {
+        fprintf(stderr, "Failed to set color from string \"%s\", assuming multicolor\n", c);
+        g_tf_color = TF_RANDOM;
+        return false;
+    }
+    tf_dbg(1, "Chosen color: \"%s\"\n", c);
+    g_tf_color = ct;
+    return true;
 }

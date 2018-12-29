@@ -15,6 +15,7 @@
 static struct option long_options[] = {
     {"animation", no_argument      , 0, 'a'},
     {"clear"    , no_argument      , 0, 'c'},
+    {"color"    , required_argument, 0, 'C'},
     {"device"   , required_argument, 0, 'd'},
     {"debug"    , required_argument, 0, 'D'},
     {"help"     , no_argument      , 0, 'h'},
@@ -29,12 +30,14 @@ void tf_usage(char* progname)
     printf("USAGE: %s [OPTIONS]\n\n", basename(progname));
     printf("  -a|--animation      Show a live animation, like a multithreaded vertical rain of characters\n");
     printf("  -c|--clear          Clear the current terminal and exit\n");
+    printf("  -C|--color  <color> Use \"color\" when printing characters. Allowed values: red, green, yellow,\n"
+           "                      blue, magenta, cyan, white, multicolor. Defaults to: multicolor\n");
     printf("  -d|--device <dev>   The device to be used. By default, the tty device attached to the current\n"
            "                      standard output is used, i.e., /dev/stdout. \"dev\" **must** be a tty.\n");
     printf("  -D|--debug  <level> Enable \"level\" amount of debug\n");
     printf("  -h|--help           Show this help and exit\n");
     printf("  -r|--rain           Fill the current terminal with random ASCII characters of random colors\n");
-    printf("  -t|--text   <text>  Write \"text\" to the terminal\n");
+    printf("  -t|--text   <text>  Write \"text\" to the terminal [not yet implemented]\n");
     printf("  -v|--verbose        Show version information and exit\n");
 }
 
@@ -54,9 +57,10 @@ int main(int argc, char* argv[])
     strcpy(tf_program_name, argv[0]);
     char* tty_dev = "/dev/stdout";  /* Use standard output as default */
     char* text = "hello";  /* Default text to write */
+    char* color;
 
     /* Parse command line arguments */
-    while ((c = getopt_long(argc, argv, "acd:D:hrt:v", long_options, &option_index)) != -1)
+    while ((c = getopt_long(argc, argv, "acC:d:D:hrt:v", long_options, &option_index)) != -1)
     {
         switch (c)
         {
@@ -65,6 +69,11 @@ int main(int argc, char* argv[])
                 break;
             case 'c':
                 clear = 1;
+                break;
+            case 'C':
+                color = optarg;
+                TF_LOWER(color);
+                tf_set_color(color);
                 break;
             case 'd':
                 tty_dev = optarg;
