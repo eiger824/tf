@@ -137,9 +137,9 @@ void* tf_thread_run(void* args)
 
     while (tf_animation_in_progress)
     {
-        pthread_mutex_lock(&g_tf_mutex);
         for (row = 1; row <= nrows; ++row)
         {
+            pthread_mutex_lock(&g_tf_mutex);
             for (col = d->start_col; col <= d->stop_col; ++col)
             {
                 // Place the cursor here
@@ -148,8 +148,8 @@ void* tf_thread_run(void* args)
                 tf_write_dev(d->t.fd, "%s%c", tf_color_from_enum(g_tf_color),
                         colvals[col - d->start_col][(nrows - row + tmp) % nrows]);
             }
+            pthread_mutex_unlock(&g_tf_mutex);
         }
-        pthread_mutex_unlock(&g_tf_mutex);
         tmp++;
         // Sleep a bit to notice the effect
         usleep(10000);
