@@ -6,8 +6,6 @@
 #include "defs.h"
 #include "colors.h"
 
-bool*  tf_columns;
-
 struct term_size g_ts;
 
 struct term_size tf_get_term_size(const char* device);

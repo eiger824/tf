@@ -120,7 +120,6 @@ void tf_fill_random_col(u8_t *arr, size_t n)
 void* tf_thread_run(void* args)
 {
     size_t row, col, nrows, ncols;
-    int c;
     tf_thread_data_t* d = (tf_thread_data_t*)args;
     nrows = d->t.rows;
     ncols = d->stop_col - d->start_col + 1;
@@ -179,11 +178,6 @@ void tf_fill_vertical_rain(struct term_size t)
     /* Toggle this flag to be able to release memory from signal */
     tf_animation_in_progress = true;
 
-    /* Create an array of the columns */
-    tf_columns = (bool*) malloc (sizeof(bool) * t.cols);
-    for (size_t i = 0; i < t.cols; ++i)
-        tf_columns[i] = false;
-
     /* Cols per thread */
     size_t cols_per_thread = t.cols / n;
 
@@ -203,8 +197,6 @@ void tf_fill_vertical_rain(struct term_size t)
     {
         pthread_join(thread[i], NULL);
     }
-    /* Free the created array */
-    free(tf_columns);
     /* Show cursor again */
     tf_write_dev(g_ts.fd, "%s", TF_SHOW_CURSOR);
     /* Set the cursor color back to normal */
