@@ -20,6 +20,7 @@ static bool tf_animation_in_progress = false;
 
 static pthread_mutex_t g_tf_mutex = PTHREAD_MUTEX_INITIALIZER;
 static enum tf_color_type g_tf_color = TF_RANDOM;
+static int g_tf_delay_ms = 10;
 
 struct term_size tf_get_term_size(const char* device)
 {
@@ -151,7 +152,7 @@ void* tf_thread_run(void* args)
         }
         tmp++;
         // Sleep a bit to notice the effect
-        usleep(10000);
+        usleep(g_tf_delay_ms * 1e3);
     }
     for (size_t i = 0; i < ncols; ++i)
         free(*(colvals + i));
@@ -372,4 +373,9 @@ bool tf_set_color(const char* c)
     tf_dbg(1, "Chosen color: \"%s\"\n", c);
     g_tf_color = ct;
     return true;
+}
+
+void tf_set_ms_delay(int ms)
+{
+    g_tf_delay_ms = ms;
 }

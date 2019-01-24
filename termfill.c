@@ -21,24 +21,29 @@ static struct option long_options[] = {
     {"help"     , no_argument      , 0, 'h'},
     {"rain"     , no_argument      , 0, 'r'},
     {"text"     , required_argument, 0, 't'},
+    {"delay"    , required_argument, 0, 'T'},
     {"version"  , no_argument      , 0, 'v'},
     {0          , 0                , 0,  0 }
 };
 
 void tf_usage(char* progname)
 {
-    printf("USAGE: %s [OPTIONS]\n\n", basename(progname));
-    printf("  -a|--animation      Show a live animation, like a multithreaded vertical rain of characters\n");
-    printf("  -c|--clear          Clear the current terminal and exit\n");
-    printf("  -C|--color  <color> Use \"color\" when printing characters. Allowed values: red, green, yellow,\n"
-           "                      blue, magenta, cyan, white, multicolor. Defaults to: multicolor\n");
-    printf("  -d|--device <dev>   The device to be used. By default, the tty device attached to the current\n"
-           "                      standard output is used, i.e., /dev/stdout. \"dev\" **must** be a tty.\n");
-    printf("  -D|--debug  <level> Enable \"level\" amount of debug\n");
-    printf("  -h|--help           Show this help and exit\n");
-    printf("  -r|--rain           Fill the current terminal with random ASCII characters of random colors\n");
-    printf("  -t|--text   <text>  Write \"text\" to the terminal [not yet implemented]\n");
-    printf("  -v|--verbose        Show version information and exit\n");
+    printf(
+            "USAGE: %s [OPTIONS]\n\n"
+            "  -a, --animation      Show a live animation, like a multithreaded vertical rain of characters\n"
+            "  -c, --clear          Clear the current terminal and exit\n"
+            "  -C, --color  <color> Use \"color\" when printing characters. Allowed values: red, green, yellow,\n"
+            "                      blue, magenta, cyan, white, multicolor. Defaults to: multicolor\n"
+            "  -d, --device <dev>   The device to be used. By default, the tty device attached to the current\n"
+            "                      standard output is used, i.e., /dev/stdout. \"dev\" **must** be a tty.\n"
+            "  -D, --debug  <level> Enable \"level\" amount of debug\n"
+            "  -h, --help           Show this help and exit\n"
+            "  -r, --rain           Fill the current terminal with random ASCII characters of random colors\n"
+            "  -t, --text   <text>  Write \"text\" to the terminal [not yet implemented]\n"
+            "  -T, --delay  <ms>    Update screen every <ms> milliseconds\n"
+            "  -v, --verbose        Show version information and exit\n"
+            , basename(progname)
+          );
 }
 
 void tf_print_info(char* progname)
@@ -53,6 +58,7 @@ int main(int argc, char* argv[])
     int clear = 0;
     int random = 0;
     int animated = 0;
+    int ms;
     char tf_program_name[100];
     strcpy(tf_program_name, argv[0]);
     char* tty_dev = "/dev/stdout";  /* Use standard output as default */
@@ -60,7 +66,7 @@ int main(int argc, char* argv[])
     char* color;
 
     /* Parse command line arguments */
-    while ((c = getopt_long(argc, argv, "acC:d:D:hrt:v", long_options, &option_index)) != -1)
+    while ((c = getopt_long(argc, argv, "acC:d:D:hrt:T:v", long_options, &option_index)) != -1)
     {
         switch (c)
         {
@@ -89,6 +95,11 @@ int main(int argc, char* argv[])
                 break;
             case 't':
                 text = optarg;
+                break;
+            case 'T':
+                ms = atoi(optarg);
+                if (ms > 0)
+                    tf_set_ms_delay(ms);
                 break;
             case 'v':
                 tf_print_info(tf_program_name);
